@@ -4,24 +4,24 @@ _tclaude() {
   local -a commands sessions
 
   commands=(
-    'ls:Lister les sessions'
-    'kill:Tuer une session'
-    'rename:Renommer une session'
+    'ls:List sessions'
+    'kill:Kill a session'
+    'rename:Rename a session'
   )
 
   sessions=(${(f)"$(tmux ls -F '#{session_name}' 2>/dev/null)"})
 
   case $CURRENT in
     2)
-      _describe 'commandes' commands
-      _describe 'sessions existantes' sessions
+      _describe 'commands' commands
+      _describe 'existing sessions' sessions
       ;;
     3)
       case $words[2] in
         kill)
           local -a targets
-          targets=('all:Toutes les sessions')
-          _describe 'cibles' targets
+          targets=('all:All sessions')
+          _describe 'targets' targets
           _describe 'sessions' sessions
           ;;
         rename)
@@ -32,7 +32,7 @@ _tclaude() {
     4)
       case $words[2] in
         rename)
-          _message 'nouveau nom'
+          _message 'new name'
           ;;
       esac
       ;;
