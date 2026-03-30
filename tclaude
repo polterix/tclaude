@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+# tclaude - tmux + Claude Code session manager
+# https://github.com/polterix/tclaude
+
+TCLAUDE_VERSION="0.1.0"
+
+_session_exists() {
+  tmux has-session -t "$1" 2>/dev/null
+}
+
+_no_sessions() {
+  echo "Aucune session tmux active."
+  exit 0
+}
+
+_usage() {
+  cat <<'USAGE'
+tclaude - tmux + Claude Code session manager
+
+Usage:
+  tclaude <nom>               Créer ou rattacher une session
+  tclaude ls                  Lister les sessions
+  tclaude kill <nom>          Tuer une session
+  tclaude kill all            Tuer toutes les sessions
+  tclaude rename <old> <new>  Renommer une session
+  tclaude -h, --help          Afficher cette aide
+  tclaude -v, --version       Afficher la version
+USAGE
+}
+
+COMMAND=${1:-""}
+
+case "$COMMAND" in
+  -h|--help)
+    _usage
+    ;;
+
+  -v|--version)
+    echo "tclaude $TCLAUDE_VERSION"
+    ;;
+
+  ls)
+    tmux ls 2>/dev/null || _no_sessions
+    ;;
+
+  kill)
+    TARGET=$2
+    if [ -z "$TARGET" ]; then
+      echo "Usage: tclaude kill <nom> | all"
+      exit 1
+    elif [ "$TARGET" = "all" ]; then
+      SESSIONS=$(tmux ls -F "#{session_name}" 2>/dev/null)
+      if [ -z "$SESSIONS" ]; then
+        _no_sessions
+      fi
+      echo "$SESSIONS" | while read -r s; do
+        tmux kill-session -t "$s" && echo "Session '$s' tuée."
+      done
+    else
+      if ! _session_exists "$TARGET"; then
+        echo "Session '$TARGET' introuvable."
+        exit 1
+      fi
+      tmux kill-session -t "$TARGET" && echo "Session '$TARGET' tuée."
+    fi
+    ;;
+
+  rename)
+    OLD=$2
+    NEW=$3
+    if [ -z "$OLD" ] || [ -z "$NEW" ]; then
+      echo "Usage: tclaude rename <ancien> <nouveau>"
+      exit 1
+    fi
+    if ! _session_exists "$OLD"; then
+      echo "Session '$OLD' introuvable."
+      exit 1
+    fi
+    tmux rename-session -t "$OLD" "$NEW" && echo "Session '$OLD' renommée en '$NEW'."
+    ;;
+
+  "")
+    _usage
+    exit 1
+    ;;
+
+  *)
+    SESSION=$1
+    if _session_exists "$SESSION"; then
+      tmux attach -t "$SESSION"
+    else
+      tmux new-session -d -s "$SESSION" "claude --name $SESSION"
+      tmux attach -t "$SESSION"
+    fi
+    ;;
+esac
